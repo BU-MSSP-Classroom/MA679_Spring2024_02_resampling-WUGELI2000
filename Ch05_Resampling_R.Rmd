@@ -62,11 +62,21 @@ ames_raw_2009=ames_raw[ames_raw$`Yr Sold`>=2008,]
 
 
 Your code:
-
 ```{r,echo=TRUE}
-#
-#
+alpha.fn = function(data, index){
+  model <- lm(`SalePrice` ~ `Lot Area`, data=data, subset = index)
+  coef(model)
+}
+
+set.seed(1)
+boot.out = boot(ames_raw_2008, alpha.fn, R = 1000)
+boot.out
+plot(boot.out)
+
+fit.lm <- lm(`SalePrice` ~ `Lot Area`, data = ames_raw_2008)
+summary(fit.lm)
 ```
+
 
 Your answer:
 
@@ -77,13 +87,18 @@ Please write your answer in full sentences.
 ~~~
 
 
-* Use cross validation  to decide which model has a good predictive accuracy.  Does the result hold true for the prediction of future data?
+* Use cross validation  to decide which model has a good predictive accuracy. Does the result hold true for the prediction of future data?
 
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+cv.error10 = rep(0, 10)
+degree = 1:10
+for(d in degree){
+  glm.fit = glm(`SalePrice` ~ poly (`Lot Area`, d), data = ames_raw_2008)
+  cv.error10[d] = cv.glm(ames_raw_2008, glm.fit, K = 10)$delta[1]
+}
+plot(degree, cv.error10, type = "b", col = "blue")
 ```
 
 Your answer:
@@ -100,8 +115,13 @@ Please write your answer in full sentences.
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+ames_raw_2008_complete <- na.omit(ames_raw_2008)
+
+numeric_columns <- sapply(ames_raw_2008_complete, is.numeric)
+predictors <- scale(ames_raw_2008_complete[, numeric_columns])
+predictors <- predictors[, !colnames(predictors) %in% "SalePrice"]
+
+response <- ames_raw_2008_complete$SalePrice
 ```
 
 Your answer:
@@ -122,7 +142,7 @@ Your code:
 #
 ```
 
-Your answer:
+Your answer: I think the bootstrap one is better.
 
 ~~~
 Please write your answer in full sentences.
@@ -157,6 +177,7 @@ Your code:
 ```
 
 Your answer:
+This is approximately 0.634, which is quite close to the observed simulation result of 0.6422. The slight discrepancy can be attributed to the randomness of the simulation and the finite number of iterations (10,000). If we increase the number of iterations, the simulated probability would likely converge closer to the theoretical probability.
 
 ~~~
 Please write your answer in full sentences.
@@ -189,6 +210,8 @@ Your code:
 
 Your answer:
 
+n = 100 and p = 1
+
 ~~~
 Please write your answer in full sentences.
 
@@ -202,8 +225,7 @@ Please write your answer in full sentences.
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+plot(x, y, main="Scatter plot of X against Y", xlab="X", ylab="Y")
 ```
 
 Your answer:
@@ -228,11 +250,29 @@ to create a single data set containing both $X$ and $Y$ .
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+loocv = function(fit){
+  h = lm.influence(fit)$h
+  mean((residuals(fit)/(1-h))^2)
+}
+```
+
+```{r}
+set.seed (1)
+x1 <- rnorm (100)
+y1 <- x1 - 2 * x1^2 + rnorm (100)
+xy <- data.frame(x1, y1)
+cv.error <- rep(0, 4)
+for(i in 1:4){
+  fit = glm(y1 ~ poly(x1, i), data = xy)
+  cv.error[i] = loocv(fit)
+}
+cv.error
+plot(1:4, cv.error, type = "b")
 ```
 
 Your answer:
+
+The second model have lowest cv error.
 
 ~~~
 Please write your answer in full sentences.
@@ -247,8 +287,17 @@ Are your results the same as what you got in (c)? Why?
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+set.seed (123)
+x1 <- rnorm (100)
+y1 <- x1 - 2 * x1^2 + rnorm (100)
+xy <- data.frame(x1, y1)
+cv.error <- rep(0, 4)
+for(i in 1:4){
+  fit = glm(y1 ~ poly(x1, i), data = xy)
+  cv.error[i] = loocv(fit)
+}
+cv.error
+plot(1:4, cv.error, type = "b")
 ```
 
 Your answer:
@@ -256,12 +305,15 @@ Your answer:
 ~~~
 Please write your answer in full sentences.
 
+The error change, but 2nd model still have the lowest CV error.
 
 ~~~
 
 (e) Which of the models in (c) had the smallest LOOCV error? Is this what you expected? Explain your answer.
 
 Your code:
+
+The second one, and it is what I expected.
 
 ```{r,echo=TRUE}
 #
@@ -283,11 +335,21 @@ Please write your answer in full sentences.
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+set.seed(1)
+xy <- data.frame(x1, y1)
+
+fits <- list()
+summaries <- list()
+for(i in 1:4){
+  fits[[i]] <- lm(y1 ~ poly(x1, i), data = xy)
+  summaries[[i]] <- summary(fits[[i]])
+}
+
+lapply(summaries, print)
 ```
 
 Your answer:
+These results agree.
 
 ~~~
 Please write your answer in full sentences.
@@ -307,8 +369,9 @@ In Chapter 4, we used logistic regression to predict the probability of default 
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+set.seed(679)
+logi.fit <- glm(default ~ income + balance, data = Default, family = binomial())
+summary(logi.fit)
 ```
 
 Your answer:
@@ -327,8 +390,11 @@ i. Split the sample set into a training set and a validation set.
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+library(caTools)
+sample_data = sample.split(Default$default, SplitRatio = 0.50)
+training.set = subset(Default, sample_data==TRUE) 
+test.set = subset(Default, sample_data==FALSE)
+test.default = test.set$default 
 ```
 
 Your answer:
@@ -344,8 +410,8 @@ ii. Fit a multiple logistic regression model using only the training observation
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+lgtrain.fit = glm(default ~ income + balance, data=training.set, family=binomial)
+summary(lgtrain.fit)
 ```
 
 Your answer:
@@ -363,8 +429,12 @@ iii. Obtain a prediction of default status for each individual in the validation
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+lgtrain.probs = predict(lgtrain.fit, test.set, type="response")
+lgtrain.preds = rep("No", length(test.set$default)) 
+lgtrain.preds[lgtrain.probs>0.5] = "Yes"
+
+table(lgtrain.preds,test.default)
+(25+113)/(4808+54)
 ```
 
 Your answer:
@@ -381,8 +451,15 @@ iv. Compute the validation set error, which is the fraction of the observations 
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+predicted_class <- predict(lgtrain.fit, data = test.set, type = "response")
+threshold <- 0.5
+predicted_labels <- ifelse(predicted_class > threshold, 1, 0)
+
+num_misclassified <- sum(predicted_labels != test.set$default)
+
+validation_set_error <- num_misclassified / nrow(test.set)
+print(validation_set_error)
+
 ```
 
 Your answer:
@@ -400,8 +477,29 @@ Please write your answer in full sentences.
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+library(caret)  
+set.seed(123)
+
+validation_errors <- rep(NA, 3)
+for(i in 1:3) {
+  trainIndex <- createDataPartition(Default$default, p = .8, list = FALSE, times = 1)
+  training_set <- Default[trainIndex, ]
+  validation_set <- Default[-trainIndex, ]
+  
+  lgtrain.fit <- glm(default ~ income + balance, data=training_set,
+                     family="binomial")
+  
+  predicted_class <- predict(lgtrain.fit, 
+                             data = validation_set, 
+                             type = "response")
+  
+  predicted_labels <- ifelse(predicted_class > 0.5, 1, 0)
+  
+  num_misclassified <- sum(predicted_labels != validation_set$default)
+  validation_errors[i] <- num_misclassified / nrow(validation_set)
+}
+
+print(validation_errors)
 ```
 
 Your answer:
@@ -419,8 +517,22 @@ Please write your answer in full sentences.
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+set.seed(123)
+trainIndex <- createDataPartition(Default$default, p = .8, list = FALSE)
+training_set <- Default[trainIndex, ]
+validation_set <- Default[-trainIndex, ]
+
+model <- glm(default ~ income + balance + student, data=training_set, family=binomial)
+
+predicted_probs <- predict(model, validation_set, type = "response")
+
+threshold <- 0.5
+predicted_class <- ifelse(predicted_probs > threshold, 'Yes', 'No')
+
+actual_class <- validation_set$default
+test_error <- mean(predicted_class != actual_class)
+
+print(test_error)
 ```
 
 Your answer:
@@ -441,8 +553,13 @@ We continue to consider the use of a logistic regression model to predict the pr
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+set.seed(123)
+
+model <- glm(default ~ income + balance, data=Default, family=binomial)
+
+model_summary <- summary(model)
+model_standard_errors <- model_summary$coefficients[, "Std. Error"]
+print(model_standard_errors)
 ```
 
 Your answer:
@@ -459,8 +576,11 @@ Please write your answer in full sentences.
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+boot.fn <- function(data, index) {
+  boot_model <- glm(default ~ income + balance, data=data[index, ],
+                    family=binomial)
+  return(coef(boot_model)[c("income", "balance")])
+}
 ```
 
 Your answer:
@@ -477,8 +597,10 @@ Please write your answer in full sentences.
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+set.seed(123)
+boot_results <- boot(data=Default, statistic=boot.fn, R=1000)
+boot_standard_errors <- apply(boot_results$t, 2, sd)
+print(boot_standard_errors)
 ```
 
 Your answer:
@@ -493,6 +615,8 @@ Please write your answer in full sentences.
 (d) Comment on the estimated standard errors obtained using the glm() function and using your bootstrap function.
 
 Your answer:
+
+Bootstrap one is more smaller.
 
 ~~~
 Please write your answer in full sentences.
@@ -510,8 +634,9 @@ We will now consider the Boston housing data set, from the ISLR2 library.
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+library(ISLR2)
+mu = mean(Boston$medv)
+mu
 ```
 
 Your answer:
@@ -529,8 +654,10 @@ Hint: We can compute the standard error of the sample mean by dividing the sampl
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+length = length(Boston$medv)
+sd = sqrt(sum((Boston$medv - mu)^2)/(length-1))
+se = sd/sqrt(length)
+se
 ```
 
 Your answer:
@@ -547,8 +674,16 @@ Please write your answer in full sentences.
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+boot.fn2 = function(data, index){
+  X=data$medv[index]
+  mu2 = mean(X)
+  return(mu2)
+}
+```
+
+```{r}
+set.seed(1)
+boot(Boston,boot.fn2,1000)
 ```
 
 Your answer:
@@ -565,8 +700,9 @@ Hint: You can approximate a 95% confidence interval using the formula $[\hat{\mu
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+mu-2*se
+mu+2*se
+t.test(Boston$medv)
 ```
 
 Your answer:
@@ -583,8 +719,8 @@ Please write your answer in full sentences.
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+median.medv = median(Boston$medv)
+median.medv
 ```
 
 Your answer:
@@ -601,8 +737,15 @@ Please write your answer in full sentences.
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+boot.fn3 = function(data, index){
+  X=data$medv[index]
+  Y = median(X)
+  return(Y)
+}
+```
+
+```{r}
+boot(Boston,boot.fn3,1000)
 ```
 
 Your answer:
@@ -620,8 +763,8 @@ Please write your answer in full sentences.
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+tenth.est = quantile(Boston$medv, probs = seq(0, 1, 0.1))
+tenth.est
 ```
 
 Your answer:
@@ -638,8 +781,15 @@ Please write your answer in full sentences.
 Your code:
 
 ```{r,echo=TRUE}
-#
-#
+tenth.percentile = quantile(Boston$medv, 0.1)
+
+boot.fn4 = function(data, index){
+  X=data$medv[index]
+  Y = quantile(X, 0.1)
+  return(Y)
+}
+
+boot(Boston,boot.fn4,1000)
 ```
 
 Your answer:
